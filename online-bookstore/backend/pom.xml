@@ -31,7 +31,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring Boot DevTools for hot reload - optional -->
+        <!-- DevTools (optional) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -39,7 +39,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- JSON Processing -->
+        <!-- JSON processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -55,11 +55,14 @@
 
     <build>
         <plugins>
-            <!-- Package executable jar -->
+            <!-- Spring Boot Maven Plugin -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>3.0.0</version>
+                <configuration>
+                    <mainClass>com.bookstore.BookstoreApplication</mainClass>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -72,3 +75,4 @@
     </build>
 
 </project>
+
