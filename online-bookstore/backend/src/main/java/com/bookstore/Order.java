@@ -8,7 +8,7 @@ import java.util.*;
 @RestController
 @CrossOrigin(origins = "*")
 @RequestMapping("/api")
-public class OrderController {
+public class Order{
 
     private List<Order> orders = new ArrayList<>();
 
