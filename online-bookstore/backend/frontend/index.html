@@ -1,50 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NextGen Bookstore</title>
-<link rel="stylesheet" href="styles.css" />
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
-  header { background: #282c34; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-  header h1 { margin: 0; }
-  nav a { color: white; margin-left: 20px; text-decoration: none; }
-  main { display: flex; padding: 20px; gap: 20px; }
-  #books { flex: 3; display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 20px; }
-  .book { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-  .book img { max-width: 100%; border-radius: 6px; height: 250px; object-fit: cover; }
-  .book h3 { font-size: 1.1rem; margin: 10px 0 5px; flex-grow: 1; }
-  .book p { margin: 4px 0; font-size: 0.9rem; color: #555; }
-  .book button { margin-top: 10px; background: #007bff; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; }
-  .book button:hover { background: #0056b3; }
-  #cart { flex: 1; background: white; padding: 15px; border-radius: 8px; max-height: 80vh; overflow-y: auto; display: flex; flex-direction: column; }
-  #cart h2 { margin-top: 0; }
-  #cart-items { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto; }
-  #cart-items li { padding: 10px 5px; border-bottom: 1px solid #ddd; font-size: 0.95rem; display: flex; justify-content: space-between; }
-  #total-amount { font-weight: bold; }
-  #checkout-button { background: #28a745; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; font-size: 1rem; }
-  #checkout-button[disabled] { background: #ccc; cursor: not-allowed; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NextGen Bookstore</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="app.js"></script>
 </head>
 <body>
-<header>
-  <h1>NextGen Bookstore</h1>
-  <nav>
-    <a href="#books">Books</a>
-    <a href="#cart">Cart (<span id="cart-count">0</span>)</a>
-  </nav>
-</header>
-<main>
-  <section id="books" class="book-list"></section>
-  <section id="cart" class="cart-section">
-    <h2>Your Cart</h2>
-    <ul id="cart-items"></ul>
-    <p>Total: ₹<span id="total-amount">0.00</span></p>
-    <button id="checkout-button" disabled>Checkout</button>
-  </section>
-</main>
-<script src="app.js"></script>
+  <div id="app" class="light-theme">
+    <nav class="navbar">
+      <div class="logo">NextGen Bookstore</div>
+      <button id="hamburger" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <ul class="nav-links">
+        <li><a href="#home" class="nav-link active">Home</a></li>
+        <li><a href="#books" class="nav-link">Books</a></li>
+        <li><a href="#categories" class="nav-link">Categories</a></li>
+        <li><a href="#wishlist" class="nav-link">Wishlist</a></li>
+        <li><a href="#cart" class="nav-link">Cart</a></li>
+        <li><a href="#profile" class="nav-link">Profile</a></li>
+      </ul>
+      <div class="theme-toggle">
+        <input type="checkbox" id="darkModeToggle" name="darkModeToggle" />
+        <label for="darkModeToggle">🌙</label>
+      </div>
+    </nav>
+
+    <header class="hero" id="home">
+      <div class="hero-content">
+        <h1 id="dynamic-hero-text">Find your next story</h1>
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Search books..." />
+          <button id="search-btn">🔍</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="reading-mood-selector">
+      <span>Select Reading Mood:</span>
+      <select id="moodSelector">
+        <option value="calm" selected>Calm</option>
+        <option value="focus">Focus</option>
+        <option value="adventure">Adventure</option>
+      </select>
+    </section>
+
+    <section class="category-filter" id="categories">
+      <button class="filter-btn active" data-category="all">All</button>
+      <button class="filter-btn" data-category="Fiction">Fiction</button>
+      <button class="filter-btn" data-category="Science">Science</button>
+      <button class="filter-btn" data-category="Self-Help">Self-Help</button>
+      <button class="filter-btn" data-category="Mystery">Mystery</button>
+      <button class="filter-btn" data-category="Comics">Comics</button>
+    </section>
+
+    <section class="featured-books" id="books">
+      <!-- Books will be dynamically loaded here -->
+    </section>
+
+    <!-- Cart Sidebar -->
+    <aside class="cart-sidebar" id="cart-sidebar">
+      <h2>Shopping Cart <span id="cart-close-btn">&times;</span></h2>
+      <div id="cart-items"></div>
+      <div class="cart-summary">
+        <p>Items: <span id="cart-count">0</span></p>
+        <p>Subtotal: ₹<span id="cart-subtotal">0.00</span></p>
+        <button id="checkout-btn">Checkout</button>
+      </div>
+    </aside>
+
+    <!-- Wishlist Modal -->
+    <div class="modal" id="wishlist-modal">
+      <div class="modal-content">
+        <span class="close-btn" id="wishlist-close-btn">&times;</span>
+        <h2>Wishlist</h2>
+        <div id="wishlist-items"></div>
+      </div>
+    </div>
+
+    <footer>
+      <p>&copy; 2025 NextGen Bookstore</p>
+      <div class="footer-links">
+        <a href="#home">Home</a> |
+        <a href="#books">Books</a> |
+        <a href="#categories">Categories</a> |
+        <a href="#profile">Profile</a>
+      </div>
+      <div class="social-icons">
+        <a href="#" aria-label="Facebook">📘</a>
+        <a href="#" aria-label="Twitter">🐦</a>
+        <a href="#" aria-label="Instagram">📸</a>
+      </div>
+    </footer>
+  </div>
 </body>
 </html>
