@@ -1,4 +1,5 @@
 package com.bookstore.controller;
+package com.bookstore.model;
 
 import com.bookstore.model.Order;
 import org.springframework.web.bind.annotation.*;
