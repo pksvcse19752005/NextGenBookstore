@@ -1,134 +1,444 @@
-const BACKEND_URL = 'https://nextgenbookstore-1.onrender.com/api';
+// API Configuration
+const API_BASE_URL = 'http://localhost:8080';
+const BOOKS_API = `${API_BASE_URL}/books`;
+const ORDERS_API = `${API_BASE_URL}/api/orders`;
+
+// State Management
+const state = {
+  books: [],
+  cart: JSON.parse(localStorage.getItem('cart')) || [],
+  wishlist: JSON.parse(localStorage.getItem('wishlist')) || [],
+  filteredBooks: [],
+  currentMood: 'calm',
+  darkMode: localStorage.getItem('darkMode') === 'true',
+};
+
+// DOM Elements
+const app = document.getElementById('app');
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.querySelector('.nav-links');
+const darkModeToggle = document.getElementById('darkModeToggle');
+const moodSelector = document.getElementById('moodSelector');
+const searchInput = document.getElementById('search-input');
+const searchBtn = document.getElementById('search-btn');
+const filterBtns = document.querySelectorAll('.filter-btn');
+const featuredBooksSection = document.querySelector('.featured-books');
+const cartSidebar = document.getElementById('cart-sidebar');
+const cartCloseBtn = document.getElementById('cart-close-btn');
+const cartItems = document.getElementById('cart-items');
 const cartCount = document.getElementById('cart-count');
-const booksContainer = document.getElementById('books');
-const cartItemsContainer = document.getElementById('cart-items');
-const totalAmountElem = document.getElementById('total-amount');
-const checkoutBtn = document.getElementById('checkout-button');
-let cart = [];
+const cartSubtotal = document.getElementById('cart-subtotal');
+const checkoutBtn = document.getElementById('checkout-btn');
+const wishlistModal = document.getElementById('wishlist-modal');
+const wishlistCloseBtn = document.getElementById('wishlist-close-btn');
+const wishlistItems = document.getElementById('wishlist-items');
+const dynamicHeroText = document.getElementById('dynamic-hero-text');
 
-// Sample books data (since you don't have a /books endpoint yet)
-const sampleBooks = [
-  { id: 1, title: "Java Programming", author: "John Doe", price: 299, imageUrl: "https://via.placeholder.com/200x250?text=Java" },
-  { id: 2, title: "Spring Boot Guide", author: "Jane Smith", price: 399, imageUrl: "https://via.placeholder.com/200x250?text=SpringBoot" },
-  { id: 3, title: "REST API Design", author: "Mike Johnson", price: 349, imageUrl: "https://via.placeholder.com/200x250?text=REST" },
-  { id: 4, title: "Web Development", author: "Sarah Lee", price: 279, imageUrl: "https://via.placeholder.com/200x250?text=Web" },
-  { id: 5, title: "Database Design", author: "Tom Wilson", price: 329, imageUrl: "https://via.placeholder.com/200x250?text=Database" },
-  { id: 6, title: "Cloud Computing", author: "Lisa Anderson", price: 449, imageUrl: "https://via.placeholder.com/200x250?text=Cloud" }
-];
-
-function updateCartUI() {
-  cartCount.textContent = cart.length;
-  cartItemsContainer.innerHTML = '';
-  let total = 0;
-  cart.forEach((book, index) => {
-    total += book.price;
-    const li = document.createElement('li');
-    li.innerHTML = `
-      <span>${book.title} - ₹${book.price}</span>
-      <button onclick="removeFromCart(${index})" style="background: #dc3545; border: none; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Remove</button>
-    `;
-    cartItemsContainer.appendChild(li);
-  });
-  totalAmountElem.textContent = total.toFixed(2);
-  checkoutBtn.disabled = cart.length === 0;
-}
-
-function loadBooks() {
-  booksContainer.innerHTML = '';
-  sampleBooks.forEach(book => {
-    const div = document.createElement('div');
-    div.className = 'book';
-    div.innerHTML = `
-      <img src="${book.imageUrl}" alt="${book.title}" />
-      <h3>${book.title}</h3>
-      <p><strong>${book.author}</strong></p>
-      <p>₹${book.price}</p>
-      <button onclick="addToCart(${book.id}, '${book.title}', ${book.price})">Add to Cart</button>
-    `;
-    booksContainer.appendChild(div);
-  });
-}
-
-function addToCart(id, title, price) {
-  cart.push({ id, title, price });
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+  initializeDarkMode();
+  loadBooks();
+  setupEventListeners();
+  rotateHeroText();
   updateCartUI();
-  alert(`${title} added to cart!`);
-}
+  updateWishlistUI();
+});
 
-function removeFromCart(index) {
-  cart.splice(index, 1);
-  updateCartUI();
-}
-
-async function createOrder(amount) {
-  const orderData = {
-    totalAmount: amount
-  };
-  const response = await fetch(`${BACKEND_URL}/orders/create`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(orderData)
-  });
-  return response.json();
-}
-
-function openRazorpay(order) {
-  const options = {
-    key: 'rzp_test_YOUR_RAZORPAY_KEY_ID', // Replace with your Razorpay test key
-    amount: order.amount * 100,
-    currency: 'INR',
-    name: 'NextGen Bookstore',
-    description: 'Book Purchase',
-    order_id: order.orderId,
-    handler: async function (response) {
-      await verifyPayment(order.orderId, response.razorpay_payment_id);
-      alert('Payment successful! Order ID: ' + order.orderId);
-      cart = [];
-      updateCartUI();
-    },
-    prefill: {
-      name: 'Demo User',
-      email: 'demo@example.com',
-      contact: '9999999999'
-    },
-    theme: { color: '#007bff' }
-  };
-  const rzp1 = new Razorpay(options);
-  rzp1.open();
-}
-
-async function verifyPayment(orderId, paymentId) {
-  try {
-    const response = await fetch(`${BACKEND_URL}/orders/verify-payment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId: orderId, razorpayPaymentId: paymentId })
-    });
-    return response.json();
-  } catch (error) {
-    console.error('Payment verification error:', error);
+// Dark Mode
+function initializeDarkMode() {
+  if (state.darkMode) {
+    app.classList.add('dark-theme');
+    app.classList.remove('light-theme');
+    darkModeToggle.checked = true;
+  } else {
+    app.classList.add('light-theme');
+    app.classList.remove('dark-theme');
+    darkModeToggle.checked = false;
   }
 }
 
+darkModeToggle.addEventListener('change', () => {
+  state.darkMode = !state.darkMode;
+  localStorage.setItem('darkMode', state.darkMode);
+  initializeDarkMode();
+});
+
+// Event Listeners
+function setupEventListeners() {
+  hamburger.addEventListener('click', toggleMobileMenu);
+  moodSelector.addEventListener('change', changeMood);
+  searchBtn.addEventListener('click', handleSearch);
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleSearch();
+  });
+  filterBtns.forEach((btn) => {
+    btn.addEventListener('click', handleFilter);
+  });
+  cartCloseBtn.addEventListener('click', () => cartSidebar.classList.remove('open'));
+  wishlistCloseBtn.addEventListener('click', () => wishlistModal.classList.remove('open'));
+  wishlistModal.addEventListener('click', (e) => {
+    if (e.target === wishlistModal) wishlistModal.classList.remove('open');
+  });
+}
+
+// Mobile Menu
+function toggleMobileMenu() {
+  navLinks.classList.toggle('open');
+  hamburger.classList.toggle('open');
+}
+
+// Load Books from Backend
+async function loadBooks() {
+  try {
+    const response = await fetch(`${BOOKS_API}?page=1&size=100`);
+    if (!response.ok) throw new Error('Failed to load books');
+    state.books = await response.json();
+    state.filteredBooks = state.books;
+    renderBooks(state.filteredBooks);
+  } catch (error) {
+    console.error('Error loading books:', error);
+    featuredBooksSection.innerHTML =
+      '<p style="grid-column: 1/-1; text-align: center; color: red;">Failed to load books. Please ensure the backend is running on http://localhost:8080</p>';
+  }
+}
+
+// Reading Mood Selector
+function changeMood() {
+  state.currentMood = moodSelector.value;
+  const moodColors = {
+    calm: '--primary-color: #6366f1; --secondary-color: #ec4899;',
+    focus: '--primary-color: #3b82f6; --secondary-color: #f59e0b;',
+    adventure: '--primary-color: #ec4899; --secondary-color: #f59e0b;',
+  };
+  document.documentElement.style.cssText = moodColors[state.currentMood];
+}
+
+// Hero Text Rotation
+function rotateHeroText() {
+  const heroTexts = [
+    'Find your next story',
+    'Read more, dream more',
+    'Books that change you',
+    'Discover new worlds',
+    'Escape into a book',
+  ];
+  let index = 0;
+  setInterval(() => {
+    dynamicHeroText.style.opacity = '0';
+    setTimeout(() => {
+      dynamicHeroText.textContent = heroTexts[index % heroTexts.length];
+      dynamicHeroText.style.opacity = '1';
+      index++;
+    }, 300);
+  }, 4000);
+}
+
+// Search Functionality
+function handleSearch() {
+  const query = searchInput.value.toLowerCase().trim();
+  if (!query) {
+    state.filteredBooks = state.books;
+  } else {
+    state.filteredBooks = state.books.filter(
+      (book) =>
+        book.title.toLowerCase().includes(query) ||
+        book.author.toLowerCase().includes(query)
+    );
+  }
+  renderBooks(state.filteredBooks);
+}
+
+// Filter Functionality
+function handleFilter(e) {
+  const category = e.target.dataset.category;
+  filterBtns.forEach((btn) => btn.classList.remove('active'));
+  e.target.classList.add('active');
+
+  if (category === 'all') {
+    state.filteredBooks = state.books;
+  } else {
+    state.filteredBooks = state.books.filter(
+      (book) => book.category === category
+    );
+  }
+  renderBooks(state.filteredBooks);
+}
+
+// Render Books
+function renderBooks(books) {
+  if (!books || books.length === 0) {
+    featuredBooksSection.innerHTML =
+      '<p style="grid-column: 1/-1; text-align: center;">No books found</p>';
+    return;
+  }
+
+  featuredBooksSection.innerHTML = books
+    .map(
+      (book) => `
+    <div class="book-card" data-id="${book.id}">
+      <div style="position: relative;">
+        <img src="${book.imageUrl || 'https://via.placeholder.com/220x300?text=' + encodeURIComponent(book.title)}" 
+             alt="${book.title}" class="book-image" />
+        <div class="book-tooltip">
+          ${book.title} • Avg read time: 4-6 hours
+        </div>
+      </div>
+      <div class="book-info">
+        <h3 class="book-title">${book.title}</h3>
+        <p class="book-author">by ${book.author}</p>
+        <div class="book-rating">
+          ⭐ ${book.rating} / 5
+        </div>
+        <p class="book-price">₹${book.price.toFixed(2)}</p>
+        <div class="book-actions">
+          <button class="btn btn-add-cart" onclick="addToCart(${book.id})">Add to Cart</button>
+          <button class="btn btn-wishlist ${
+            state.wishlist.some((item) => item.id === book.id) ? 'active' : ''
+          }" onclick="toggleWishlist(${book.id})">❤️</button>
+        </div>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+}
+
+// Cart Functions
+function addToCart(bookId) {
+  const book = state.books.find((b) => b.id === bookId);
+  if (!book) return;
+
+  const existingItem = state.cart.find((item) => item.id === bookId);
+  if (existingItem) {
+    existingItem.quantity += 1;
+  } else {
+    state.cart.push({ ...book, quantity: 1 });
+  }
+
+  saveCart();
+  updateCartUI();
+  animateAddToCart(bookId);
+  showCartNotification();
+}
+
+function animateAddToCart(bookId) {
+  const bookCard = document.querySelector(`[data-id="${bookId}"]`);
+  if (!bookCard) return;
+
+  const bookImage = bookCard.querySelector('.book-image');
+  const cartIcon = document.querySelector('.nav-link');
+  const rect1 = bookImage.getBoundingClientRect();
+  const rect2 = cartIcon.getBoundingClientRect();
+
+  const flyingImage = bookImage.cloneNode(true);
+  flyingImage.style.position = 'fixed';
+  flyingImage.style.left = rect1.left + 'px';
+  flyingImage.style.top = rect1.top + 'px';
+  flyingImage.style.width = rect1.width + 'px';
+  flyingImage.style.height = rect1.height + 'px';
+  flyingImage.style.zIndex = '9999';
+  flyingImage.style.pointerEvents = 'none';
+  document.body.appendChild(flyingImage);
+
+  setTimeout(() => {
+    flyingImage.style.transition = 'all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    flyingImage.style.left = rect2.left + 'px';
+    flyingImage.style.top = rect2.top + 'px';
+    flyingImage.style.width = '30px';
+    flyingImage.style.height = '30px';
+    flyingImage.style.opacity = '0';
+  }, 10);
+
+  setTimeout(() => document.body.removeChild(flyingImage), 800);
+}
+
+function showCartNotification() {
+  const notification = document.createElement('div');
+  notification.textContent = '✅ Added to cart!';
+  notification.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    z-index: 10000;
+    animation: slideIn 0.3s ease, slideOut 0.3s ease 2.7s forwards;
+  `;
+  document.body.appendChild(notification);
+  setTimeout(() => document.body.removeChild(notification), 3000);
+}
+
+function saveCart() {
+  localStorage.setItem('cart', JSON.stringify(state.cart));
+}
+
+function updateCartUI() {
+  cartCount.textContent = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  cartSubtotal.textContent = subtotal.toFixed(2);
+
+  cartItems.innerHTML =
+    state.cart.length === 0
+      ? '<p style="text-align: center; padding: 2rem;">Your cart is empty</p>'
+      : state.cart
+          .map(
+            (item) => `
+        <div class="cart-item">
+          <img src="${item.imageUrl || 'https://via.placeholder.com/60x80'}" 
+               alt="${item.title}" class="cart-item-image" />
+          <div class="cart-item-details">
+            <p class="cart-item-title">${item.title}</p>
+            <p class="cart-item-price">₹${item.price.toFixed(2)} x ${item.quantity}</p>
+          </div>
+          <button class="cart-item-remove" onclick="removeFromCart(${item.id})">🗑️</button>
+        </div>
+      `
+          )
+          .join('');
+}
+
+function removeFromCart(bookId) {
+  state.cart = state.cart.filter((item) => item.id !== bookId);
+  saveCart();
+  updateCartUI();
+}
+
+function showCart() {
+  cartSidebar.classList.add('open');
+}
+
+// Wishlist Functions
+function toggleWishlist(bookId) {
+  const book = state.books.find((b) => b.id === bookId);
+  if (!book) return;
+
+  const existingItem = state.wishlist.find((item) => item.id === bookId);
+  if (existingItem) {
+    state.wishlist = state.wishlist.filter((item) => item.id !== bookId);
+  } else {
+    state.wishlist.push(book);
+  }
+
+  saveWishlist();
+  updateWishlistUI();
+  renderBooks(state.filteredBooks);
+}
+
+function saveWishlist() {
+  localStorage.setItem('wishlist', JSON.stringify(state.wishlist));
+}
+
+function updateWishlistUI() {
+  wishlistItems.innerHTML =
+    state.wishlist.length === 0
+      ? '<p style="grid-column: 1/-1; text-align: center; padding: 2rem;">Your wishlist is empty</p>'
+      : state.wishlist
+          .map(
+            (item) => `
+        <div class="wishlist-item">
+          <img src="${item.imageUrl || 'https://via.placeholder.com/150x200'}" 
+               alt="${item.title}" class="wishlist-item-image" />
+          <div class="wishlist-item-info">
+            <p class="wishlist-item-title">${item.title}</p>
+            <p class="wishlist-item-price">₹${item.price.toFixed(2)}</p>
+            <button class="wishlist-remove" onclick="toggleWishlist(${item.id})">Remove</button>
+          </div>
+        </div>
+      `
+          )
+          .join('');
+}
+
+function showWishlist() {
+  wishlistModal.classList.add('open');
+}
+
+// Checkout
 checkoutBtn.addEventListener('click', async () => {
-  const total = parseFloat(totalAmountElem.textContent);
-  if (total > 0) {
-    try {
-      const order = await createOrder(total);
-      if (order.orderId) {
-        openRazorpay(order);
-      } else {
-        alert('Failed to create order');
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Checkout failed!');
-    }
+  if (state.cart.length === 0) {
+    alert('Your cart is empty!');
+    return;
+  }
+
+  const totalAmount = state.cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  try {
+    const response = await fetch(`${ORDERS_API}/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        totalAmount: totalAmount,
+        items: state.cart,
+      }),
+    });
+
+    if (!response.ok) throw new Error('Failed to create order');
+    const order = await response.json();
+
+    alert(`✅ Order created successfully!\nOrder ID: ${order.orderId}\nAmount: ₹${totalAmount.toFixed(2)}`);
+
+    state.cart = [];
+    saveCart();
+    updateCartUI();
+    cartSidebar.classList.remove('open');
+  } catch (error) {
+    console.error('Checkout error:', error);
+    alert('❌ Failed to create order. Please try again.');
   }
 });
 
-// Initialize
-loadBooks();
-updateCartUI();
+// Navigation Links
+document.querySelectorAll('.nav-link').forEach((link) => {
+  link.addEventListener('click', (e) => {
+    const href = link.getAttribute('href');
 
-updateCartUI();
+    if (href === '#cart') {
+      e.preventDefault();
+      showCart();
+    } else if (href === '#wishlist') {
+      e.preventDefault();
+      showWishlist();
+    } else if (href === '#books') {
+      e.preventDefault();
+      document.querySelector('.featured-books').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    navLinks.classList.remove('open');
+    hamburger.classList.remove('open');
+  });
+});
+
+// Scroll Animations
+const observerOptions = {
+  threshold: 0.1,
+  rootMargin: '0px 0px -100px 0px',
+};
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.style.animation = 'fadeIn 0.6s ease forwards';
+      observer.unobserve(entry.target);
+    }
+  });
+}, observerOptions);
+
+// Add CSS animations dynamically
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(20px); }
+  }
+`;
+document.head.appendChild(style);
+
