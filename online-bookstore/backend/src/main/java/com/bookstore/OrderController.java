@@ -12,6 +12,11 @@ public class OrderController {
 
     private List<Order> orders = new ArrayList<>();
 
+    @GetMapping("/")
+    public String home() {
+        return "Welcome to Bookstore API";
+    }
+
     @PostMapping("/orders/create")
     public Map<String, Object> createOrder(@RequestBody Order order) {
         String orderId = "ORD-" + System.currentTimeMillis();
