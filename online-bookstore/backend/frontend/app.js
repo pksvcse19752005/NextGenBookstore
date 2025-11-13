@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = 'https://nextgenbookstore-1.onrender.com';
 const BOOKS_API = `${API_BASE_URL}/books`;
 const ORDERS_API = `${API_BASE_URL}/api/orders`;
 
