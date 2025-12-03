@@ -924,22 +924,22 @@
       }
       renderBooks(state.filteredBooks);
     }
+   function handleFilter(e) {
+  const category = e.target.dataset.category;
+  filterBtns.forEach((btn) => btn.classList.remove('active'));
+  e.target.classList.add('active');
 
-    function handleFilter(e) {
-      const category = e.target.dataset.category;
-      filterBtns.forEach((btn) => btn.classList.remove('active'));
-      e.target.classList.add('active');
-
-      if (category === 'all') {
-        state.filteredBooks = state.books;
-      } else {
-        state.filteredBooks = state.books.filter(
-          (book) => book.category === category
-        );
-      }
-      renderBooks(state.filteredBooks);
-    }
-
+  if (category === 'all') {
+    state.filteredBooks = state.books;
+  } else {
+    state.filteredBooks = state.books.filter(
+      (book) =>
+        Array.isArray(book.categories) &&
+        book.categories.includes(category)
+    );
+  }
+  renderBooks(state.filteredBooks);
+}
     function renderBooks(books) {
       if (!books || books.length === 0) {
         featuredBooksSection.innerHTML =
