@@ -27,15 +27,15 @@ public class BookController {
         }
     }
 
-    @GetMapping("/books")
-    public List<Book> getBooks(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        int start = (page - 1) * size;
-        int end = Math.min(start + size, books.size());
-        if (start >= books.size()) {
-            return List.of();
-        }
-        return books.subList(start, end);
+@GetMapping("/books")
+public List<Book> getBooks(
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(defaultValue = "20") int size) {
+    int start = (page - 1) * size;
+    int end = Math.min(start + size, books.size());
+    if (start >= books.size()) {
+        return List.of();
     }
+    return books.subList(start, end);
 }
+
