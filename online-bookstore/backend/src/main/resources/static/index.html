@@ -1127,43 +1127,77 @@
     function showWishlist() {
       wishlistModal.classList.add('open');
     }
-
     checkoutBtn.addEventListener('click', async () => {
-      if (state.cart.length === 0) {
-        alert('Your cart is empty!');
-        return;
-      }
+  if (state.cart.length === 0) {
+    alert('Your cart is empty!');
+    return;
+  }
 
-      const totalAmount = state.cart.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      );
+  const totalAmount = state.cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
-      try {
-        const response = await fetch(`${ORDERS_API}/create`, {
+  try {
+    // 1) create order (your order + Razorpay order) on backend
+    const response = await fetch(`${ORDERS_API}/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        totalAmount: totalAmount,
+        items: state.cart,
+      }),
+    });
+
+    if (!response.ok) throw new Error('Failed to create order');
+    const order = await response.json();
+
+    // 2) open Razorpay checkout
+    const options = {
+      key: order.key,
+      amount: order.amount * 100,           // rupees -> paise
+      currency: 'INR',
+      name: 'NextGen Bookstore',
+      description: 'Book purchase',
+      order_id: order.razorpayOrderId,      // Razorpay order id
+      handler: async function (rzpRes) {
+        // 3) verify payment on backend
+        await fetch(`${ORDERS_API}/verify-payment`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            totalAmount: totalAmount,
-            items: state.cart,
+            orderId: order.orderId,                     // your order id
+            razorpayOrderId: rzpRes.razorpay_order_id,
+            razorpayPaymentId: rzpRes.razorpay_payment_id,
+            razorpaySignature: rzpRes.razorpay_signature,
           }),
         });
 
-        if (!response.ok) throw new Error('Failed to create order');
-        const order = await response.json();
-
-        alert(`✅ Order created successfully!\nOrder ID: ${order.orderId}\nAmount: ₹${totalAmount.toFixed(2)}`);
+        alert(
+          `✅ Payment success!\nOrder ID: ${order.orderId}\nAmount: ₹${totalAmount.toFixed(2)}`
+        );
 
         state.cart = [];
         saveCart();
         updateCartUI();
         cartSidebar.classList.remove('open');
-      } catch (error) {
-        console.error('Checkout error:', error);
-        alert('❌ Failed to create order. Please try again.');
-      }
-    });
+      },
+      prefill: {
+        name: 'Customer',
+        email: 'test@example.com',
+      },
+      theme: {
+        color: '#6366f1',
+      },
+    };
 
+    const rzp = new Razorpay(options);
+    rzp.open();
+  } catch (error) {
+    console.error('Checkout error:', error);
+    alert('❌ Failed to start payment. Please try again.');
+  }
+});
     document.querySelectorAll('.nav-link').forEach((link) => {
       link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
