@@ -13,13 +13,15 @@ public class PaymentService {
     public PaymentService(RazorpayClient razorpayClient) {
         this.razorpayClient = razorpayClient;
     }
+public JSONObject createRazorpayOrder(double amount) throws Exception {
+    JSONObject req = new JSONObject();
+    req.put("amount", (int) (amount * 100)); // in paise
+    req.put("currency", "INR");
+    req.put("receipt", "order_rcpt_" + System.currentTimeMillis());
+    req.put("payment_capture", 1);
 
-    public JSONObject createRazorpayOrder(double amount) throws Exception {
-        JSONObject req = new JSONObject();
-        req.put("amount", (int) (amount * 100)); // in paise
-        req.put("currency", "INR");
-        req.put("payment_capture", 1);
-        Order order = razorpayClient.Orders.create(req);
-        return order.toJson(); // contains razorpay order_id
+    Order order = razorpayClient.orders.create(req);  // <-- lowercase 'orders'
+    return order.toJson();
+} // contains razorpay order_id
     }
-}
+
