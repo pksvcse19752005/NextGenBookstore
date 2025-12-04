@@ -783,6 +783,17 @@ grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
 <a href="#" aria-label="Twitter">🐦</a>
 <a href="#" aria-label="Instagram">📸</a>
 </div>
+    <section id="profile" style="padding:2rem; max-width:800px; margin:0 auto;">
+      <h2>My Profile</h2>
+      <div id="profile-info" style="margin-top:1rem; padding:1rem; border:1px solid #e2e8f0; border-radius:8px;">
+        <!-- filled by JS -->
+      </div>
+
+      <h2 style="margin-top:2rem;">Order History</h2>
+      <div id="order-history" style="margin-top:1rem;">
+        <!-- filled by JS -->
+      </div>
+    </section>  
 </footer>
 </div>
 <script>
@@ -818,6 +829,9 @@ const wishlistModal = document.getElementById('wishlist-modal');
 const wishlistCloseBtn = document.getElementById('wishlist-close-btn');
 const wishlistItems = document.getElementById('wishlist-items');
 const dynamicHeroText = document.getElementById('dynamic-hero-text');
+const profileInfoDiv = document.getElementById('profile-info');
+const orderHistoryDiv = document.getElementById('order-history');
+
 
 document.addEventListener('DOMContentLoaded', () => {
 initializeDarkMode();
@@ -977,6 +991,53 @@ state.wishlist.some((item) => item.id === book.id) ? 'active' : ''
 )
 .join('');
 }
+      async function loadOrders() {
+      try {
+        const res = await fetch(ORDERS_API);
+        if (!res.ok) throw new Error('Failed to load orders');
+        const orders = await res.json();
+        renderProfileAndOrders(orders);
+      } catch (e) {
+        console.error('Order history error:', e);
+        profileInfoDiv.innerHTML = '<p style="color:red;">Could not load profile.</p>';
+        orderHistoryDiv.innerHTML = '<p style="color:red;">Could not load orders.</p>';
+      }
+    }
+
+    function renderProfileAndOrders(orders) {
+      if (!orders || orders.length === 0) {
+        profileInfoDiv.innerHTML = '<p>No orders yet. Place an order to save your address.</p>';
+        orderHistoryDiv.innerHTML = '<p>No orders yet.</p>';
+        return;
+      }
+
+      const latest = orders[orders.length - 1];
+
+      profileInfoDiv.innerHTML = `
+        <p><strong>Name:</strong> ${latest.customerName || '-'}</p>
+        <p><strong>Phone:</strong> ${latest.phone || '-'}</p>
+        <p><strong>Address:</strong><br>
+          ${(latest.addressLine1 || '')} ${(latest.addressLine2 || '')}<br>
+          ${(latest.city || '')}, ${(latest.state || '')} ${(latest.postalCode || '')}
+        </p>
+      `;
+
+      orderHistoryDiv.innerHTML = orders
+        .slice()
+        .reverse()
+        .map(
+          (o) => `
+          <div style="margin-bottom:1rem;padding:1rem;border:1px solid #e2e8f0;border-radius:8px;">
+            <p><strong>Order ID:</strong> ${o.orderId}</p>
+            <p><strong>Status:</strong> ${o.paymentStatus}</p>
+            <p><strong>Amount:</strong> ₹${o.totalAmount}</p>
+            <p><strong>Placed For:</strong> ${o.customerName || '-'}</p>
+          </div>
+        `
+        )
+        .join('');
+    }
+
 
 function addToCart(bookId) {
 const book = state.books.find((b) => b.id === bookId);
@@ -1127,62 +1188,83 @@ alt="${item.title}" class="wishlist-item-image" />
 function showWishlist() {
 wishlistModal.classList.add('open');
 }
-
 checkoutBtn.addEventListener('click', async () => {
-if (state.cart.length === 0) {
-alert('Your cart is empty!');
-return;
-}
+  if (state.cart.length === 0) {
+    alert('Your cart is empty!');
+    return;
+  }
 
-const totalAmount = state.cart.reduce(
-(sum, item) => sum + item.price * item.quantity,
-0
-);
+  const totalAmount = state.cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
-try {
-const response = await fetch(`${ORDERS_API}/create`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-totalAmount: totalAmount,
-items: state.cart,
-}),
+  // simple prompts to collect address (demo)
+  const customerName = prompt('Enter your name:');
+  if (!customerName) return;
+
+  const addressLine1 = prompt('Enter address line 1:');
+  const addressLine2 = prompt('Enter address line 2 (optional):') || '';
+  const city = prompt('Enter city:');
+  const stateName = prompt('Enter state:');
+  const postalCode = prompt('Enter PIN code:');
+  const phone = prompt('Enter phone number:');
+
+  try {
+    const response = await fetch(`${ORDERS_API}/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        totalAmount,
+        customerName,
+        addressLine1,
+        addressLine2,
+        city,
+        state: stateName,
+        postalCode,
+        phone,
+      }),
+    });
+
+    if (!response.ok) throw new Error('Failed to create order');
+    const order = await response.json();
+
+    alert(`✅ Order created!\nOrder ID: ${order.orderId}\nAmount: ₹${totalAmount.toFixed(2)}`);
+
+    state.cart = [];
+    saveCart();
+    updateCartUI();
+    cartSidebar.classList.remove('open');
+  } catch (error) {
+    console.error('Checkout error:', error);
+    alert('❌ Failed to create order. Please try again.');
+  }
 });
+    document.querySelectorAll('.nav-link').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
 
-if (!response.ok) throw new Error('Failed to create order');
-const order = await response.json();
+        if (href === '#cart') {
+          e.preventDefault();
+          showCart();
+        } else if (href === '#wishlist') {
+          e.preventDefault();
+          showWishlist();
+        } else if (href === '#books') {
+          e.preventDefault();
+          document.querySelector('.featured-books').scrollIntoView({ behavior: 'smooth' });
+        } else if (href === '#profile') {
+          e.preventDefault();
+          loadOrders(); // load address + history
+          document.getElementById('profile').scrollIntoView({ behavior: 'smooth' });
+        }
 
-alert(`✅ Order created successfully!\nOrder ID: ${order.orderId}\nAmount: ₹${totalAmount.toFixed(2)}`);
+        navLinks.classList.remove('open');
+        hamburger.classList.remove('open');
+      });
+    });
 
-state.cart = [];
-saveCart();
-updateCartUI();
-cartSidebar.classList.remove('open');
-} catch (error) {
-console.error('Checkout error:', error);
-alert('❌ Failed to create order. Please try again.');
-}
-});
 
-document.querySelectorAll('.nav-link').forEach((link) => {
-link.addEventListener('click', (e) => {
-const href = link.getAttribute('href');
-
-if (href === '#cart') {
-e.preventDefault();
-showCart();
-} else if (href === '#wishlist') {
-e.preventDefault();
-showWishlist();
-} else if (href === '#books') {
-e.preventDefault();
-document.querySelector('.featured-books').scrollIntoView({ behavior: 'smooth' });
-}
-
-navLinks.classList.remove('open');
-hamburger.classList.remove('open');
-});
-});
 </script>
 </body>
 </html>
