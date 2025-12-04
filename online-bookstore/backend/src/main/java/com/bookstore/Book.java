@@ -1,4 +1,3 @@
-book.java
 package com.bookstore.model;
 
 import java.util.List;
@@ -47,4 +46,4 @@ public class Book {
     public List<String> getCategories() { return categories; }
     public void setCategories(List<String> categories) { this.categories = categories; }
 }
-wait for reply
+
